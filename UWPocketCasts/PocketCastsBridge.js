@@ -1,5 +1,8 @@
 ﻿(function () {
     const imageSelector = ".player-image .podcast-image .image-loaded";
+    const episodeTitleSelector = ".episode .episode-title";
+    const podcastTitleSelector = ".podcast-title-date .podcast-title";
+
     var foundAudio;
 
     function onEventPlaying(e) { window.external.notify('playing'); }
@@ -64,11 +67,23 @@
             return foundAudio ? foundAudio.currentTime : 0;
         }, 
 
+        get episodeTitle() {
+            var el = document.querySelector(episodeTitleSelector);
+            return el ? el.innerText : "";
+        },
+
+        get podcastTitle() {
+            var el = document.querySelector(podcastTitleSelector);
+            return el ? el.innerText : "";
+        },
+
         get jsonPlayerState() {
             return JSON.stringify({
                 isPlaying: this.isPlaying,
                 durationInSeconds: this.durationInSeconds,
                 positionInSeconds: this.positionInSeconds,
+                episodeTitle: this.episodeTitle,
+                podcastTitle: this.podcastTitle,
             });
         },
 

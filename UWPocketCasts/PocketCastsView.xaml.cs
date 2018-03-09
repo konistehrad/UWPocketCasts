@@ -75,7 +75,8 @@ namespace UWPocketCasts
                 string[] evalArgs = new string[1];
 
                 evalArgs[0] = contents;
-                bool.Parse(await webView.InvokeScriptAsync("eval", evalArgs));
+                string injectResult = await webView.InvokeScriptAsync("eval", evalArgs);
+                if (injectResult != "loaded") return false;
 
                 await SyncPlayerState();
 
