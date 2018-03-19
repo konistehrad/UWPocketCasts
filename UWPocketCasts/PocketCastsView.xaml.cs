@@ -24,12 +24,15 @@ namespace UWPocketCasts
     public sealed partial class PocketCastsView : UserControl
     {
         public const string PocketCastsBaseURL = "https://playbeta.pocketcasts.com/web/";
-        // <WebView x:Name="MainWebView" Source="https://playbeta.pocketcasts.com/web/"/>
+
         private WebView webView;
         private bool kickedOffWatch;
 
         public bool Playing { get; private set; }
         public double DurationInSeconds { get; private set; }
+        public string PodcastImageURL { get; private set; }
+        public string PodcastTitle { get; private set; }
+        public string EpisodeTitle { get; private set; }
 
         private double positionInSeconds;
         public double PositionInSeconds
@@ -38,6 +41,7 @@ namespace UWPocketCasts
             set
             {
                 // dispatch async call to update scrub position
+                UpdatePosition(value);
             }
         }
 
@@ -53,6 +57,13 @@ namespace UWPocketCasts
             webView.Navigate(new Uri(PocketCastsBaseURL));
         }
 
+        private async Task<double> UpdatePosition(double pos)
+        {
+            await Eval("window.pocketCastBridge.positionInSeconds = " + pos);
+            await SyncPlayerState();
+            return positionInSeconds;
+        }
+
         private void WebView_NavigationStarting(WebView sender, WebViewNavigationStartingEventArgs args)
         {
             // reject navigation to non pocketcasts sites ...
@@ -62,7 +73,7 @@ namespace UWPocketCasts
                 args.Cancel = true;
             }
         }
-
+        
         private async Task<bool> InjectBridgeJS()
         {
             try
@@ -72,10 +83,7 @@ namespace UWPocketCasts
                 );
 
                 string contents = await bridgeStream.ReadToEndAsync();
-                string[] evalArgs = new string[1];
-
-                evalArgs[0] = contents;
-                string injectResult = await webView.InvokeScriptAsync("eval", evalArgs);
+                string injectResult = await Eval(contents);
                 if (injectResult != "loaded") return false;
 
                 await SyncPlayerState();
@@ -90,18 +98,31 @@ namespace UWPocketCasts
 
         private async Task SyncPlayerState()
         {
-            string[] evalArgs = new string[1];
+            string jsonResult = await Eval("window.pocketCastBridge.jsonPlayerState");
 
-            evalArgs[0] = "window.pocketCastBridge.jsonPlayerState";
-            string jsonResult = await webView.InvokeScriptAsync("eval", evalArgs);
             JsonObject obj = JsonValue.Parse(jsonResult).GetObject();
             bool playing = obj.GetNamedBoolean("isPlaying");
             double duration = obj.GetNamedNumber("durationInSeconds");
             double position = obj.GetNamedNumber("positionInSeconds");
+            string episodeTitle = obj.GetNamedString("episodeTitle");
+            string podcastTitle = obj.GetNamedString("podcastTitle");
+            string podcastImageURL = obj.GetNamedString("podcastImageURL");
 
             this.Playing = playing;
             this.DurationInSeconds = duration;
             this.positionInSeconds = position; // use field, not prop here!!!
+            this.PodcastImageURL = podcastImageURL;
+            this.PodcastTitle = podcastTitle;
+            this.EpisodeTitle = episodeTitle;
+
+            // Debug.WriteLine("Playing? {0} Podcast? {1} : {4} Position? {2:0.00}/{3:0.00}", this.Playing, this.PodcastTitle, this.positionInSeconds, this.DurationInSeconds, this.EpisodeTitle);
+        }
+        
+        private IAsyncOperation<string> Eval(string arg)
+        {
+            string[] evalArgs = new string[1];
+            evalArgs[0] = arg;
+            return webView.InvokeScriptAsync("eval", evalArgs);
         }
 
         private void WebView_NavigationCompleted(WebView sender, WebViewNavigationCompletedEventArgs args)
@@ -118,7 +139,7 @@ namespace UWPocketCasts
         
         private void WebView_ScriptNotify(object sender, NotifyEventArgs e)
         {
-            Debug.WriteLine(string.Format("ScriptNotify: {0}", e.Value));
+            // Debug.WriteLine(string.Format("ScriptNotify: {0}", e.Value));
 
             string value = e.Value;
 
@@ -141,6 +162,10 @@ namespace UWPocketCasts
             else if(value == "audioLost")
             {
                 Playing = false;
+            }
+            else if(value =="tick")
+            {
+                SyncPlayerState();
             }
         }
     }

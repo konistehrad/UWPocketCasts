@@ -1,4 +1,5 @@
 ﻿(function () {
+    const pollTimeInMs = 250;
     const imageSelector = ".player-image .podcast-image .image-loaded";
     const episodeTitleSelector = ".episode .episode-title";
     const podcastTitleSelector = ".podcast-title-date .podcast-title";
@@ -47,11 +48,15 @@
                     window.external.notify('audioLost');
                 }
             }
+
+            // tick tock don't stop
+            // notify the wrapper it's time to take a look at the player state
+            window.external.notify('tick');
         }
         catch (e) {
         }
 
-        setTimeout(jsWatch, 500);
+        setTimeout(jsWatch, pollTimeInMs);
     }
 
     window.pocketCastBridge = {
@@ -67,6 +72,23 @@
             return foundAudio ? foundAudio.currentTime : 0;
         }, 
 
+        set positionInSeconds(value) {
+            // no audio, no good
+            if (!foundAudio) {
+                return;
+            }
+
+            // try parsing input; if we fail, bail
+            // (this way accepts strings and floats)
+            value = Number.parseFloat(value);
+            if (Number.isNaN(value)) {
+                return;
+            }
+
+            // we made it this far, do the assignment!
+            foundAudio.currentTime = value;
+        },
+
         get episodeTitle() {
             var el = document.querySelector(episodeTitleSelector);
             return el ? el.innerText : "";
@@ -77,6 +99,11 @@
             return el ? el.innerText : "";
         },
 
+        get podcastImageURL() {
+            var el = document.querySelector(imageSelector);
+            return el ? el.src : "";
+        },
+
         get jsonPlayerState() {
             return JSON.stringify({
                 isPlaying: this.isPlaying,
@@ -84,6 +111,7 @@
                 positionInSeconds: this.positionInSeconds,
                 episodeTitle: this.episodeTitle,
                 podcastTitle: this.podcastTitle,
+                podcastImageURL: this.podcastImageURL,
             });
         },
 
@@ -96,8 +124,7 @@
         },
     };
 
-    setTimeout(jsWatch, 500);
-
-
+    setTimeout(jsWatch, pollTimeInMs);
+    
     return 'loaded';
 })();
