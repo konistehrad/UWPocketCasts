@@ -6,13 +6,18 @@
 A simple UWP client that wraps the [Pocket Casts Beta Player](https://playbeta.pocketcasts.com/web) in a client that responds to media keys.
 It was developed and tested in Windows 10 Fall Creators Update. Backwards compatibility is not guaranteed.
 
-
-
 ## Getting Started
 
 1. Sign up for [Pocket Casts web player](https://play.pocketcasts.com/). It's relatively inexpensive and great.
 1. This was developed in [MS Visual Studio 2017 Community](https://www.visualstudio.com/downloads/), which is recommended for development and deployment.
 1. Crack open `UWPocketCasts.sln` in Visual Studio, and hit "> Local Machine" at the top
+
+## ToDo
+
+- [ ] Start building sideload-able appxbundle files
+- [ ] Build them in a way that doesn't require the installation of a weirdo root cert
+
+(If anyone has any Hot Tips™️ on this please let me know; I'd love to provide a trivially installable version of this application)
 
 ## Authors
 
