@@ -1,7 +1,12 @@
 # UWPocketCasts
 
+![UWPocketCasts full preview image](https://user-images.githubusercontent.com/2061559/37634216-04ce91e6-2bcc-11e8-8cd9-54170af040d9.PNG)
+![UWPocketCasts media controls example](https://user-images.githubusercontent.com/2061559/37634247-1eaf5172-2bcc-11e8-84ac-0a834f0a53a7.PNG)
+
 A simple UWP client that wraps the [Pocket Casts Beta Player](https://playbeta.pocketcasts.com/web) in a client that responds to media keys.
 It was developed and tested in Windows 10 Fall Creators Update. Backwards compatibility is not guaranteed.
+
+
 
 ## Getting Started
 
