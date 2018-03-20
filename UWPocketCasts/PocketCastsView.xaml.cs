@@ -134,6 +134,8 @@ namespace UWPocketCasts
                 systemMediaTransportControls.IsPauseEnabled = false;
                 systemMediaTransportControls.IsRewindEnabled = false;
                 systemMediaTransportControls.IsFastForwardEnabled = false;
+                systemMediaTransportControls.IsNextEnabled = false;
+                systemMediaTransportControls.IsPreviousEnabled = false;
 
 
                 updater.MusicProperties.Artist = string.Empty;
@@ -148,8 +150,10 @@ namespace UWPocketCasts
 
                 systemMediaTransportControls.IsPlayEnabled = true;
                 systemMediaTransportControls.IsPauseEnabled = true;
-                systemMediaTransportControls.IsRewindEnabled = true;
-                systemMediaTransportControls.IsFastForwardEnabled = true;
+                systemMediaTransportControls.IsNextEnabled = true;
+                systemMediaTransportControls.IsPreviousEnabled = true;
+                //systemMediaTransportControls.IsRewindEnabled = true;
+                //systemMediaTransportControls.IsFastForwardEnabled = true;
 
                 systemMediaTransportControls.PlaybackStatus =
                     this.Playing ?
@@ -211,13 +215,13 @@ namespace UWPocketCasts
                         await Eval("window.pocketCastBridge.play()");
                     });
                     break;
-                case SystemMediaTransportControlsButton.FastForward:
+                case SystemMediaTransportControlsButton.Next:
                     await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
                     {
                         await Eval("window.pocketCastBridge.fastForward()");
                     });
                     break;
-                case SystemMediaTransportControlsButton.Rewind:
+                case SystemMediaTransportControlsButton.Previous:
                     await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
                     {
                         await Eval("window.pocketCastBridge.rewind()");
