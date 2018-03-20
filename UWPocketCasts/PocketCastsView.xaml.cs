@@ -9,6 +9,9 @@ using System.Threading.Tasks;
 using Windows.Data.Json;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.Media;
+using Windows.Media.Playback;
+using Windows.Storage.Streams;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -30,9 +33,9 @@ namespace UWPocketCasts
 
         public bool Playing { get; private set; }
         public double DurationInSeconds { get; private set; }
-        public string PodcastImageURL { get; private set; }
-        public string PodcastTitle { get; private set; }
-        public string EpisodeTitle { get; private set; }
+        public string PodcastImageURL { get; private set; } = string.Empty;
+        public string PodcastTitle { get; private set; } = string.Empty;
+        public string EpisodeTitle { get; private set; } = string.Empty;
 
         private double positionInSeconds;
         public double PositionInSeconds
@@ -45,6 +48,10 @@ namespace UWPocketCasts
             }
         }
 
+        private string lastPodcastImageURL = string.Empty;
+        private bool hasAudio;
+        private SystemMediaTransportControls systemMediaTransportControls;
+
         public PocketCastsView()
         {
             this.InitializeComponent();
@@ -55,6 +62,9 @@ namespace UWPocketCasts
             webView.NavigationStarting += WebView_NavigationStarting;
             webView.NavigationCompleted += WebView_NavigationCompleted;
             webView.Navigate(new Uri(PocketCastsBaseURL));
+            
+            systemMediaTransportControls = SystemMediaTransportControls.GetForCurrentView();
+            systemMediaTransportControls.ButtonPressed += SystemControls_ButtonPressed;
         }
 
         private async Task<double> UpdatePosition(double pos)
@@ -64,16 +74,6 @@ namespace UWPocketCasts
             return positionInSeconds;
         }
 
-        private void WebView_NavigationStarting(WebView sender, WebViewNavigationStartingEventArgs args)
-        {
-            // reject navigation to non pocketcasts sites ...
-            Debug.WriteLine("WebView_NavigationStarting: " + args.Uri.Host);
-            if (!args.Uri.Host.Contains("pocketcasts.com", StringComparison.InvariantCultureIgnoreCase))
-            {
-                args.Cancel = true;
-            }
-        }
-        
         private async Task<bool> InjectBridgeJS()
         {
             try
@@ -102,12 +102,14 @@ namespace UWPocketCasts
 
             JsonObject obj = JsonValue.Parse(jsonResult).GetObject();
             bool playing = obj.GetNamedBoolean("isPlaying");
+            bool hasAudio = obj.GetNamedBoolean("hasAudio");
             double duration = obj.GetNamedNumber("durationInSeconds");
             double position = obj.GetNamedNumber("positionInSeconds");
             string episodeTitle = obj.GetNamedString("episodeTitle");
             string podcastTitle = obj.GetNamedString("podcastTitle");
             string podcastImageURL = obj.GetNamedString("podcastImageURL");
 
+            this.hasAudio = hasAudio;
             this.Playing = playing;
             this.DurationInSeconds = duration;
             this.positionInSeconds = position; // use field, not prop here!!!
@@ -115,7 +117,71 @@ namespace UWPocketCasts
             this.PodcastTitle = podcastTitle;
             this.EpisodeTitle = episodeTitle;
 
+            SyncMediaTransportControlsToPlayerState();
             // Debug.WriteLine("Playing? {0} Podcast? {1} : {4} Position? {2:0.00}/{3:0.00}", this.Playing, this.PodcastTitle, this.positionInSeconds, this.DurationInSeconds, this.EpisodeTitle);
+        }
+
+        private void SyncMediaTransportControlsToPlayerState()
+        {
+            SystemMediaTransportControlsDisplayUpdater updater = systemMediaTransportControls.DisplayUpdater;
+            updater.Type = MediaPlaybackType.Music;
+            
+            if (!this.hasAudio)
+            {
+                // we don't have nothin, sorry!
+                systemMediaTransportControls.PlaybackStatus = MediaPlaybackStatus.Closed;
+                systemMediaTransportControls.IsPlayEnabled = false;
+                systemMediaTransportControls.IsPauseEnabled = false;
+                systemMediaTransportControls.IsRewindEnabled = false;
+                systemMediaTransportControls.IsFastForwardEnabled = false;
+
+
+                updater.MusicProperties.Artist = string.Empty;
+                updater.MusicProperties.Title = string.Empty;
+
+                lastPodcastImageURL = string.Empty;
+                updater.Thumbnail = null;
+            }
+            else
+            {
+                var timelineProperties = new SystemMediaTransportControlsTimelineProperties();
+
+                systemMediaTransportControls.IsPlayEnabled = true;
+                systemMediaTransportControls.IsPauseEnabled = true;
+                systemMediaTransportControls.IsRewindEnabled = true;
+                systemMediaTransportControls.IsFastForwardEnabled = true;
+
+                systemMediaTransportControls.PlaybackStatus =
+                    this.Playing ?
+                        MediaPlaybackStatus.Playing :
+                        MediaPlaybackStatus.Paused;
+
+                updater.MusicProperties.Artist = this.PodcastTitle;
+                updater.MusicProperties.Title = this.EpisodeTitle;
+
+                timelineProperties.StartTime = TimeSpan.FromSeconds(0);
+                timelineProperties.MinSeekTime = TimeSpan.FromSeconds(0);
+                timelineProperties.Position = TimeSpan.FromSeconds(this.positionInSeconds);
+                timelineProperties.MaxSeekTime = TimeSpan.FromSeconds(this.DurationInSeconds);
+                timelineProperties.EndTime = TimeSpan.FromSeconds(this.DurationInSeconds);
+                
+                if(!lastPodcastImageURL.Equals(this.PodcastImageURL))
+                {
+                    lastPodcastImageURL = this.PodcastImageURL;
+                    if(!string.IsNullOrEmpty(PodcastImageURL))
+                    {
+                        updater.Thumbnail = 
+                            RandomAccessStreamReference.CreateFromUri(new Uri(PodcastImageURL));
+                    }
+                    else
+                    {
+                        updater.Thumbnail = null;
+                    }
+                }
+
+            }
+
+            updater.Update();
         }
         
         private IAsyncOperation<string> Eval(string arg)
@@ -135,6 +201,49 @@ namespace UWPocketCasts
             }
         }
 
+        private async void SystemControls_ButtonPressed(SystemMediaTransportControls sender, SystemMediaTransportControlsButtonPressedEventArgs args)
+        {
+            switch (args.Button)
+            {
+                case SystemMediaTransportControlsButton.Play:
+                    await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
+                    {
+                        await Eval("window.pocketCastBridge.play()");
+                    });
+                    break;
+                case SystemMediaTransportControlsButton.FastForward:
+                    await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
+                    {
+                        await Eval("window.pocketCastBridge.fastForward()");
+                    });
+                    break;
+                case SystemMediaTransportControlsButton.Rewind:
+                    await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
+                    {
+                        await Eval("window.pocketCastBridge.rewind()");
+                    });
+                    break;
+                case SystemMediaTransportControlsButton.Pause:
+                    await Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal, async () =>
+                    {
+                        await Eval("window.pocketCastBridge.pause()");
+                    });
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        private void WebView_NavigationStarting(WebView sender, WebViewNavigationStartingEventArgs args)
+        {
+            // reject navigation to non pocketcasts sites ...
+            Debug.WriteLine("WebView_NavigationStarting: " + args.Uri.Host);
+            if (!args.Uri.Host.Contains("pocketcasts.com", StringComparison.InvariantCultureIgnoreCase))
+            {
+                args.Cancel = true;
+            }
+        }
+
         private void WebViewBorder_Loaded(object sender, RoutedEventArgs e) { }
         
         private void WebView_ScriptNotify(object sender, NotifyEventArgs e)
@@ -145,28 +254,25 @@ namespace UWPocketCasts
 
             if (value == "playing")
             {
-                Playing = true;
             }
             else if(value == "pause")
             {
-                Playing = false;
             }
             else if(value == "ended")
             {
-                Playing = false;
             }
             else if(value == "audioFound")
             {
-
             }
             else if(value == "audioLost")
             {
-                Playing = false;
             }
             else if(value =="tick")
             {
-                SyncPlayerState();
             }
+
+            // no matter what, we sync here!
+            SyncPlayerState();
         }
     }
 }

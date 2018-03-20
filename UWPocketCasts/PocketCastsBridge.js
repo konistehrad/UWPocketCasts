@@ -1,6 +1,9 @@
 ﻿(function () {
-    const pollTimeInMs = 250;
+    const pollTimeInMs = 500;
+
     const imageSelector = ".player-image .podcast-image .image-loaded";
+    const rewindSelector = ".player-controls .skip-back-button";
+    const ffSelector = ".player-controls .skip-forward-button";
     const episodeTitleSelector = ".episode .episode-title";
     const podcastTitleSelector = ".podcast-title-date .podcast-title";
 
@@ -60,10 +63,14 @@
     }
 
     window.pocketCastBridge = {
+        get hasAudio() {
+            return !!foundAudio;
+        },
+
         get isPlaying() {
             return foundAudio && foundAudio.duration > 0 && !foundAudio.paused;
         },
-
+        
         get durationInSeconds() {
             return foundAudio ? foundAudio.duration : 0;
         },
@@ -106,6 +113,7 @@
 
         get jsonPlayerState() {
             return JSON.stringify({
+                hasAudio: this.hasAudio,
                 isPlaying: this.isPlaying,
                 durationInSeconds: this.durationInSeconds,
                 positionInSeconds: this.positionInSeconds,
@@ -121,6 +129,14 @@
 
         play() {
             foundAudio && foundAudio.play();
+        },
+
+        fastForward() {
+            foundAudio && document.querySelector(ffSelector).click();
+        },
+
+        rewind() {
+            foundAudio && document.querySelector(rewindSelector).click();
         },
     };
 
