@@ -4,7 +4,7 @@
   <mp:PhoneIdentity PhoneProductId="14c6a7de-b914-40aa-9d42-3682fda7f448" PhonePublisherId="00000000-0000-0000-0000-000000000000" />
   <Properties>
     <DisplayName>UWPocketCasts</DisplayName>
-    <PublisherDisplayName>konis</PublisherDisplayName>
+    <PublisherDisplayName>Conrad Kreyling</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
   <Dependencies>
@@ -15,7 +15,7 @@
   </Resources>
   <Applications>
     <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="UWPocketCasts.App">
-      <uap:VisualElements DisplayName="UWPocketCasts" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" Description="UWPocketCasts" BackgroundColor="#f44336">
+      <uap:VisualElements DisplayName="UWPocketCasts" Square150x150Logo="Assets\Square150x150Logo.png" Square44x44Logo="Assets\Square44x44Logo.png" Description="UWPocketCasts is a simple frontend for https://playbeta.pocketcasts.com with support for media controls" BackgroundColor="#f44336">
         <uap:DefaultTile Wide310x150Logo="Assets\Wide310x150Logo.png" Square310x310Logo="Assets\LargeTile.png" Square71x71Logo="Assets\SmallTile.png" ShortName="Pocket Casts">
           <uap:ShowNameOnTiles>
             <uap:ShowOn Tile="square150x150Logo" />
